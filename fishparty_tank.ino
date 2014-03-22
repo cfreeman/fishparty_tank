@@ -27,8 +27,9 @@ int NbTopsFan;                                       // The number of revolumeut
 unsigned long t;                                     // The last time that volumeume was measured.
 volatile float volume;                               // The total volume measured by the flow sensor. Do not access directly,
                                                      // use getVolume to fetch the current dispensed volume.
-static float total_volume = 1000.00;                 // The total volume of the drink dispenser in ml.
-float target_full = 1.0;                             // The target percentage full that we want the tank to be.
+float target_lvl = 1.0;
+static const float TOTAL_VOLUME = 1000.00;           // The total volume of the drink dispenser in ml.
+static const int VALVE_PIN = 5;                      // The pin that the valve for dispensing drinks sits on.
 
 /**
  * Callback method for pin2 interrupt. Updates the total volume that has been drained from
@@ -65,42 +66,55 @@ float getVolume() {
  */
 void setup() {
   pinMode(13,OUTPUT);
-  digitalWrite(13, HIGH);                   // Engage the boot LED.
-  Bridge.begin();                           // Begin the bridge between the two processors on the Yun.
-  pinMode(2, INPUT);                        // Initializes digital pin 2 as an input
-  attachInterrupt(1, updatevolume, RISING); // Sets pin 2 on the Arduino Yun as the interrupt.
+  digitalWrite(13, HIGH);                    // Engage the boot LED.
+  Bridge.begin();                            // Begin the bridge between the two processors on the Yun.
+  pinMode(2, INPUT);                         // Initializes digital pin 2 as an input
+  attachInterrupt(1, updatevolume, RISING);  // Sets pin 2 on the Arduino Yun as the interrupt.
 
-  server.noListenOnLocalhost();             // Allow people to connect from the wider network.
-  server.begin();                           // Warm up the HTTP server and redirect to here.
-  digitalWrite(13, LOW);                    // Power down the boot LED.
+  server.listenOnLocalhost();                // Allow people to connect from the wider network.
+  server.begin();                            // Warm up the HTTP server and redirect to here.
+  digitalWrite(13, LOW);                     // Power down the boot LED.
 }
 
 /**
  * Main Arduino loop.
  */
 void loop() {
+  const float current_lvl = (TOTAL_VOLUME - getVolume()) / TOTAL_VOLUME;
+
   YunClient client = server.accept();
   if (client) {
-    process(client);
-    client.stop();                          // Close connection and free resources.
+    target_lvl = process(client, target_lvl);
+    client.stop();                           // Close connection and free resources.
+  }
+
+  if (target_lvl < current_lvl) {
+    digitalWrite(VALVE_PIN, HIGH);
+    digitalWrite(13, HIGH);
+  } else {
+    digitalWrite(VALVE_PIN, LOW);
+    digitalWrite(13, LOW);
   }
 
   delay(50);
 }
 
-void process(YunClient client) {
+float process(YunClient client, float default_lvl) {
+  // ADDRESSS: 192.168.0.6/arduino/drain/0.55
 
   // Parse the incomming command.
-  client.readStringUntil('/');
   String command = client.readStringUntil('/');
   command.trim();
 
   // If it is a drain command, parse the target volume.
   if (command == "drain") {
-    target_full = client.parseFloat();
-    Serial.print("Target Volume: ");
-    Serial.println(target_full);
+    float target_lvl = client.parseFloat();
     client.print("Target Volume: ");
-    client.println(target_full);
+    client.println(target_lvl);
+
+    return target_lvl;
   }
+
+  // Unable to parse incoming command - leave tank at current level.
+  return default_lvl;
 }
