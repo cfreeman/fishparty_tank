@@ -36,12 +36,19 @@ static const int VALVE_PIN = 5;                      // The pin that the valve f
  * the drink dispenser. This method is called on each 'pulse' of the hall effect sensor in
  * the flow meter.
  */
-void updatevolume () {
+void updatevolume() {
   unsigned long ct = millis();
   NbTopsFan++;  //Accumulate the pulses from the hall effect sesnors (rising edge).
 
-  // Every ten spins of the flow sensor, calculate frequency and flow rate.
-  if (NbTopsFan > 10) {
+  // If we have not recieved any pulses for the last 500ms, restart the flow calculation.
+  // The valve for the sensor must have been closed.
+  if ((ct - t) > 500) {
+    NbTopsFan = 0;
+    t = ct;
+  }
+
+  // Every twenty spins of the flow sensor, calculate frequency and flow rate.
+  if (NbTopsFan > 20) {
     float dV = (NbTopsFan / (0.073f * 60.0f)) * ((ct - t) / 1000.0f); // 73Q = 1L / Minute.
     volume += dV;
 
