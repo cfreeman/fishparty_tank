@@ -81,6 +81,8 @@ void setup() {
   server.listenOnLocalhost();                // Allow people to connect from the wider network.
   server.begin();                            // Warm up the HTTP server and redirect to here.
   digitalWrite(13, LOW);                     // Power down the boot LED.
+
+  Serial.begin(9600);
 }
 
 /**
@@ -118,6 +120,7 @@ float process(YunClient client, float default_lvl) {
     float target_lvl = client.parseFloat();
     client.print("Target Volume: ");
     client.println(target_lvl);
+    Serial.println(target_lvl);
 
     return target_lvl;
   }
