@@ -28,7 +28,7 @@ unsigned long t;                                     // The last time that volum
 volatile float volume;                               // The total volume measured by the flow sensor. Do not access directly,
                                                      // use getVolume to fetch the current dispensed volume.
 float target_lvl = 1.0;
-static const float TOTAL_VOLUME = 1000.00;           // The total volume of the drink dispenser in ml.
+static const float TOTAL_VOLUME = 80000.00;          // The total volume of the drink dispenser in ml.
 static const int VALVE_PIN = 5;                      // The pin that the valve for dispensing drinks sits on.
 
 /**
@@ -48,8 +48,8 @@ void updatevolume() {
   }
 
   // Every twenty spins of the flow sensor, calculate frequency and flow rate.
-  if (NbTopsFan > 20) {
-    float dV = (NbTopsFan / (0.073f * 60.0f)) * ((ct - t) / 1000.0f); // 73Q = 1L / Minute.
+  if (NbTopsFan > 10) {
+    float dV = (NbTopsFan / (0.0170f * 60.0f)) * ((ct - t) / 1000.0f); // 73Q = 1L / Minute.
     volume += dV;
 
     NbTopsFan = 0;
